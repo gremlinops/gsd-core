@@ -16,6 +16,7 @@ import modelProfiles = require('./model-profiles.cjs');
 const { MODEL_PROFILES } = modelProfiles;
 import { getGlobalConfigDir } from './runtime-homes.cjs';
 import { getDirName, hostBehaviorsFor, NO_LOCAL_CONFIG_DIR_SENTINEL, type UnknownRuntimeError } from './runtime-name-policy.cjs';
+import { sanitizeForPrompt, sanitizeLabel } from './security.cjs';
 // #3242 — model-catalog is a genuine leaf (only node:path + its own JSON), which is
 // exactly why Phase 1 (#3241) moved isAnthropicFlavoredModel there: this module can
 // consume it without dragging model-resolver's config-loader chain into a
@@ -125,6 +126,11 @@ interface CodexSandboxPostureResult {
 // oversized or secret-shaped config value can never reach a report in full.
 function truncatePostureValue(value: string): string {
   return value.length > 64 ? `${value.slice(0, 64)}…` : value;
+}
+
+// A runtime id can come from project config or the environment: bound and escape it before stderr or the model sees it.
+function reportedRuntimeId(runtime: unknown): string {
+  return sanitizeForPrompt(sanitizeLabel(truncatePostureValue(String(runtime))));
 }
 
 /**
@@ -663,4 +669,5 @@ export = {
   POSTURE_REASON,
   AGENTS_INSTALLED_REASON,
   resolveAgentHint,
+  reportedRuntimeId,
 };

@@ -428,7 +428,7 @@ function withProjectRoot(cwd: string, result: Record<string, unknown>): Record<s
   if (agentStatus.reason) result['agents_installed_reason'] = agentStatus.reason;
   result['missing_agents'] = agentStatus.missing_agents;
   result['agents_dir'] = agentStatus.agents_dir;
-  result['agent_runtime'] = agentStatus.agent_runtime;
+  result['agent_runtime'] = agentInstallCheck.reportedRuntimeId(agentStatus.agent_runtime);
   const config = loadConfig(cwd);
   if (config.response_language) {
     result['response_language'] = config.response_language;
@@ -4343,6 +4343,7 @@ function buildAgentSkillsBlock(
     globalSkillsBase = null;
     runtimeUnknown = true;
   }
+  const shownRuntime = agentInstallCheck.reportedRuntimeId(runtime);
 
   // Hoist trusted roots computation before the loop: loadTrustedGlobalRoots does
   // realpathSync I/O and should run at most once per call, not once per failing skill.
@@ -4383,7 +4384,7 @@ function buildAgentSkillsBlock(
           validEntries.push({ kind: 'directive', name: skillName });
         } else {
           warn(
-            `[agent-skills] WARNING: Plugin-namespaced skill "global:${skillName}" requires a Skill-tool-capable runtime (claude) — skipping on runtime "${runtime}"\n`,
+            `[agent-skills] WARNING: Plugin-namespaced skill "global:${skillName}" requires a Skill-tool-capable runtime (claude) — skipping on runtime "${shownRuntime}"\n`,
           );
         }
         continue;
@@ -4392,8 +4393,8 @@ function buildAgentSkillsBlock(
       if (globalSkillsBase === null) {
         warn(
           runtimeUnknown
-            ? `[agent-skills] WARNING: GSD does not know runtime "${runtime}", so it cannot locate its global skills directory — skipping "global:${skillName}"\n`
-            : `[agent-skills] WARNING: Runtime "${runtime}" does not use a skills directory — "global:${skillName}" is not supported on this runtime\n`,
+            ? `[agent-skills] WARNING: GSD does not know runtime "${shownRuntime}", so it cannot locate its global skills directory — skipping "global:${skillName}"\n`
+            : `[agent-skills] WARNING: Runtime "${shownRuntime}" does not use a skills directory — "global:${skillName}" is not supported on this runtime\n`,
         );
         continue;
       }
