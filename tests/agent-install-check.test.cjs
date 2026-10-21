@@ -510,7 +510,8 @@ describe('checkAgentsInstalled on an UNKNOWN runtime id', () => {
   const RETIRED = [...runtimeNamePolicy.RETIRED_RUNTIME_IDS];
   const NEAR_MISSES = REGISTERED.flatMap((id) => [id.toUpperCase(), `${id}-cli`]);
   const LEGACY = [...runtimeNamePolicy.LEGACY_NON_REGISTRY_RUNTIME_IDS];
-  const classified = (s) => Object.hasOwn(REGISTRY_RUNTIMES, s) || LEGACY.includes(s) || runtimeNamePolicy.isRetiredRuntimeId(s);
+  const classified = (s) => [s, runtimeNamePolicy.canonicalizeRuntimeName(s)].some((id) => id !== null
+    && (Object.hasOwn(REGISTRY_RUNTIMES, id) || LEGACY.includes(id) || runtimeNamePolicy.isRetiredRuntimeId(id)));
   const assertReported = (id) => {
     const result = agentInstallCheck.checkAgentsInstalled(id);
     assert.strictEqual(result.reason, AGENTS_INSTALLED_REASON.UNKNOWN_RUNTIME, `${JSON.stringify(id)} is reported`);
@@ -574,6 +575,14 @@ describe('checkAgentsInstalled on an UNKNOWN runtime id', () => {
     const nearMisses = NEAR_MISSES.filter((s) => !classified(s));
     assert.ok(nearMisses.length > 0, 'near-misses remain after filtering');
     for (const id of nearMisses) assertReported(id);
+  });
+
+  test('an alias or padded form of a KNOWN id never throws: it is scanned or reported', () => {
+    for (const id of ['CLAUDE', 'codex-cli', ' claude ']) {
+      const result = agentInstallCheck.checkAgentsInstalled(id);
+      if (result.agents_installed === null) assert.strictEqual(result.reason, AGENTS_INSTALLED_REASON.UNKNOWN_RUNTIME, `${JSON.stringify(id)} is reported`);
+      else assert.strictEqual(typeof result.agents_installed, 'boolean', `${JSON.stringify(id)} is scanned`);
+    }
   });
 
   test('property: an arbitrary string that names no runtime is reported', () => {
